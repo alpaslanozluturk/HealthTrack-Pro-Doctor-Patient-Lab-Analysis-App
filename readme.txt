@@ -1,0 +1,1 @@
+React Native ve expo ile geliştirilen mobil tahlil takip sistemi. 
