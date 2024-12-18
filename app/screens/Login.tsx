@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TextInput, ActivityIndicator, Button } from "react-native";
+import { View, Text, StyleSheet, TextInput, ActivityIndicator, Button, KeyboardAvoidingView } from "react-native";
 import React, { useState } from "react";
 import { FIREBASE_APP, FIREBASE_AUTH } from "../../FirebaseConfig";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
@@ -38,6 +38,7 @@ const Login = () => {
     }
     return(
         <View style={styles.container}>
+            <KeyboardAvoidingView behavior="padding"></KeyboardAvoidingView>
          <TextInput value={email} style={styles.input} placeholder="Email" autoCapitalize="none"onChangeText={(text)=>setEmail(text)}></TextInput>
          <TextInput secureTextEntry={true} value={password} style={styles.input} placeholder="Password" autoCapitalize="none"onChangeText={(text)=>setPassword(text)}></TextInput>
         {loading ? (<ActivityIndicator size="large" color="#0000ff"/> 
