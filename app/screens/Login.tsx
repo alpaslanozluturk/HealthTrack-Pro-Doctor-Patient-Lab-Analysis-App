@@ -1,23 +1,23 @@
 import { View, Text, StyleSheet, TextInput, ActivityIndicator, Button, KeyboardAvoidingView } from "react-native";
 import React, { useState } from "react";
-import { FIREBASE_APP, FIREBASE_AUTH } from "../../FirebaseConfig";
+import { FIREBASE_APP, FIREBASE_AUTH, FIRESTORE_DB } from "../../FirebaseConfig";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const auth = FIREBASE_AUTH;  
-    
+    const db = FIRESTORE_DB;
     const singIn = async () => {
         setLoading(true);
         try {
             const response = await signInWithEmailAndPassword(auth, email, password);
-            console.log(response);
-            
+            //console.log(response);
         } catch (error: any) {
             console.log(error);
-            alert('Kayıt başarısız' + error.message);
+            alert('Giriş başarısız' + error.message);
         } finally {
             setLoading(false);
         }
@@ -27,7 +27,7 @@ const Login = () => {
         setLoading(true);
         try {
             const response = await createUserWithEmailAndPassword(auth, email, password);
-            console.log(response);
+            //console.log(response);
             alert('Kayıt Başarılı!');
         } catch (error: any) {
             console.log(error);
