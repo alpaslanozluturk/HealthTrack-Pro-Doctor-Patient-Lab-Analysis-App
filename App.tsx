@@ -10,15 +10,16 @@ import { FIREBASE_APP, FIREBASE_AUTH, FIRESTORE_DB } from "./FirebaseConfig";
 import { collection, query, where, getDocs } from "firebase/firestore";
 async function getUserRole(email: string) {
   try {
-    const usersRef = collection(FIRESTORE_DB, "users");
+    const usersRef = collection(FIRESTORE_DB, "admins");
     const q = query(usersRef, where("email", "==", email));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
       const userDoc = querySnapshot.docs[0];
       const userData = userDoc.data();
-      return userData.role;
+      return "admin";
     } else {
-      console.error("No user found with this email.");
+      console.log("No admin found with this email.");
+      return "user"
     }
   } catch (error) {
     console.error("Error retrieving user role:", error);
@@ -39,7 +40,7 @@ function InsideLayout() {
 function InsideLayout2() {
   return (
     <InsideStack.Navigator>
-      <InsideStack.Screen name="admin" component={AdminScreen} />
+      <InsideStack.Screen name="Admin" component={AdminScreen} />
     </InsideStack.Navigator>
   );
 }
