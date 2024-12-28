@@ -47,7 +47,7 @@ interface G1G2G3G4Range {
   [key: string]: string;
 }
 
-const findReferenceRange = (ageInMonths: number, testName: string): string[] => {
+const findReferenceRange = (ageInMonths: number, testName: string): { source: string; range: string }[] => {
     // Helper function to check if age is in range
     const isInRange = (range: string): boolean => {
         if (range === ">216" || range === ">168" || range === ">72") {
@@ -57,13 +57,29 @@ const findReferenceRange = (ageInMonths: number, testName: string): string[] => 
         return ageInMonths >= min && ageInMonths <= max;
     };
 
-    const foundRanges: string[] = [];
+    const foundRanges: { source: string; range: string }[] = [];
 
     // Check in kilavuz-ap
     const apRanges = ranges["kilavuz-ap"] as RangeData[];
     for (const range of apRanges) {
         if (isInRange(range.age_months) && range[testName]) {
-            foundRanges.push(range[testName] as string);
+            foundRanges.push({ source: "ap", range: range[testName] as string });
+        }
+    }
+
+    // Check in kilavuz-medsci
+    const medsciRanges = ranges["kilavuz-medsci"] as RangeData[];
+    for (const range of medsciRanges) {
+        if (isInRange(range.age_months) && range[testName]) {
+            foundRanges.push({ source: "medsci", range: range[testName] as string });
+        }
+    }
+
+    // Check in kilavuz-tjp
+    const tjpRanges = ranges["kilavuz-tjp"] as RangeData[];
+    for (const range of tjpRanges) {
+        if (isInRange(range.age_months) && range[testName]) {
+            foundRanges.push({ source: "tjp", range: range[testName] as string });
         }
     }
 
@@ -73,19 +89,19 @@ const findReferenceRange = (ageInMonths: number, testName: string): string[] => 
         const gamRanges = cilvRanges.GAM as GAMRange[];
         for (const range of gamRanges) {
             if (isInRange(range.age_months) && range[testName]) {
-                foundRanges.push(range[testName]);
+                foundRanges.push({ source: "cilv", range: range[testName] });
             }
         }
     } else if (["IgG1", "IgG2", "IgG3", "IgG4"].includes(testName)) {
         const subRanges = cilvRanges.G1G2G3G4 as G1G2G3G4Range[];
         for (const range of subRanges) {
             if (isInRange(range.age_months) && range[testName]) {
-                foundRanges.push(range[testName]);
+                foundRanges.push({ source: "cilv", range: range[testName] });
             }
         }
     }
 
-    return foundRanges.length > 0 ? foundRanges : ["No reference range found"];
+    return foundRanges.length > 0 ? foundRanges : [{ source: "none", range: "No reference range found" }];
 };
 
 const Details = () => {
@@ -159,31 +175,31 @@ const Details = () => {
     }, []);
 
     const renderTestResult = (result: TestResult) => {
-        const referenceRanges = ageInMonths ? findReferenceRange(ageInMonths, result.testname) : ["Calculating..."];
-        const currentValue = parseFloat(result.result);
+        const referenceRanges = ageInMonths ? findReferenceRange(ageInMonths, result.testname) : [{ source: "none", range: "Calculating..." }];
+        const currentValue = parseFloat((result.result).replace(",", '.'));
         
         const getStatusArrow = (min: number, max: number, value: number): string => {
             if (isNaN(value) || isNaN(min) || isNaN(max)) return "";
             if (value < min) return "↓";  // down arrow for low
             if (value > max) return "↑";   // up arrow for high
-            return "";                     // no arrow for normal
+            return "⇔";                     // two sided arrow for normal
         };
 
-        const renderReferenceRange = (range: string, index: number) => {
-            if (range === "No reference range found" || range === "Calculating...") {
-                return <Text key={index} style={styles.referenceRange}>Reference: {range}</Text>;
+        const renderReferenceRange = (referenceData: { source: string; range: string }, index: number) => {
+            if (referenceData.source === "none") {
+                return <Text key={index} style={styles.referenceRange}>Reference: {referenceData.range}</Text>;
             }
 
-            const [min, max] = range.split("-").map(val => parseFloat(val));
+            const [min, max] = referenceData.range.split("-").map(val => parseFloat(val));
             const arrow = getStatusArrow(min, max, currentValue);
             
             return (
                 <Text key={index} style={styles.referenceRange}>
-                    Reference {index + 1}: {range} {" "}
+                    Referans {referenceData.source}: {referenceData.range} {" "}
                     {arrow && (
                         <Text style={[
                             styles.arrow,
-                            arrow === "↑" ? styles.highArrow : styles.lowArrow
+                            arrow === "↑" ? styles.highArrow : arrow === "↓" ? styles.lowArrow : styles.twoSidedArrow
                         ]}>
                             {arrow}
                         </Text>
@@ -291,6 +307,9 @@ const styles = StyleSheet.create({
     },
     lowArrow: {
         color: '#2ecc71',  // green for low
+    },
+    twoSidedArrow: {
+        color: '#00008B',  // blue for normal
     },
     referenceRange: {
         fontSize: 12,
