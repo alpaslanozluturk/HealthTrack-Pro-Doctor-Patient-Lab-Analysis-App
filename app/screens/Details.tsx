@@ -125,6 +125,7 @@ const Details = () => {
                 const querySnapshot = await getDocs(q);
                 const results: GroupedResults = {};
 
+                // First, collect all results
                 querySnapshot.forEach((doc) => {
                     const data = doc.data() as TestResult;
                     if (!results[data.date]) {
@@ -133,7 +134,25 @@ const Details = () => {
                     results[data.date].push(data);
                 });
 
-                setGroupedTestResults(results);
+                // Sort dates in descending order (newest first)
+                const sortedDates = Object.keys(results).sort((a, b) => {
+                    const [dayA, monthA, yearA] = a.split('.').map(num => parseInt(num));
+                    const [dayB, monthB, yearB] = b.split('.').map(num => parseInt(num));
+                    const dateA = new Date(yearA, monthA - 1, dayA);
+                    const dateB = new Date(yearB, monthB - 1, dayB);
+                    return dateB.getTime() - dateA.getTime();
+                });
+
+                // Create a new sorted results object
+                const sortedResults: GroupedResults = {};
+                sortedDates.forEach(date => {
+                    // Sort test results within each date by test name
+                    sortedResults[date] = results[date].sort((a, b) => 
+                        a.testname.localeCompare(b.testname)
+                    );
+                });
+
+                setGroupedTestResults(sortedResults);
             } catch (error) {
                 console.error("Error fetching test results:", error);
             } finally {

@@ -4,6 +4,7 @@ import Login from './app/screens/Login';
 import List from './app/screens/List';
 import Details from './app/screens/Details';
 import AdminScreen from './app/screens/AdminScreen';
+import PatientListScreen from './app/screens/PatientListScreen';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { FIREBASE_APP, FIREBASE_AUTH, FIRESTORE_DB } from "./FirebaseConfig";
@@ -14,8 +15,6 @@ async function getUserRole(email: string) {
     const q = query(usersRef, where("email", "==", email));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
-      const userDoc = querySnapshot.docs[0];
-      const userData = userDoc.data();
       return "admin";
     } else {
       console.log("No admin found with this email.");
@@ -41,6 +40,7 @@ function InsideLayout2() {
   return (
     <InsideStack.Navigator>
       <InsideStack.Screen name="Admin" component={AdminScreen} />
+      <InsideStack.Screen name="PatientList" component={PatientListScreen} />
     </InsideStack.Navigator>
   );
 }
