@@ -1,7 +1,8 @@
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Modal } from "react-native";
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Modal, ActivityIndicator, Alert } from "react-native";
 import React, { useState, useEffect } from "react";
 import { FIREBASE_AUTH, FIRESTORE_DB } from "../../FirebaseConfig";
-import { collection, query, getDocs, where, orderBy } from "firebase/firestore";
+import { collection, query, getDocs, where, orderBy, addDoc } from "firebase/firestore";
+import { Picker } from '@react-native-picker/picker';
 import ranges from "../../ranges";
 
 interface Patient {
@@ -63,6 +64,105 @@ interface TestResults {
     [testname: string]: TestResult[];
 }
 
+interface AddTestModalProps {
+    visible: boolean;
+    onClose: () => void;
+    patientEmail: string;
+}
+
+const TEST_TYPES = ["IgA", "IgM", "IgG", "IgG1", "IgG2", "IgG3", "IgG4"];
+
+const AddTestModal = ({ visible, onClose, patientEmail }: AddTestModalProps) => {
+    const [selectedTest, setSelectedTest] = useState(TEST_TYPES[0]);
+    const [testResult, setTestResult] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async () => {
+        if (!testResult) {
+            Alert.alert('Hata', 'Lütfen test sonucunu girin.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const today = new Date();
+            const formattedDate = `${String(today.getDate()).padStart(2, '0')}.${String(today.getMonth() + 1).padStart(2, '0')}.${today.getFullYear()}`;
+
+            await addDoc(collection(FIRESTORE_DB, "testresults"), {
+                email: patientEmail,
+                date: formattedDate,
+                testname: selectedTest,
+                result: testResult.replace(".", ",")
+            });
+
+            Alert.alert('Başarılı', 'Test sonucu kaydedildi.');
+            setTestResult('');
+            onClose();
+        } catch (error) {
+            Alert.alert('Hata', 'Test sonucu kaydedilemedi.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Modal
+            visible={visible}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={onClose}
+        >
+            <View style={styles.modalView}>
+                <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Yeni Test Sonucu</Text>
+                        <TouchableOpacity
+                            style={styles.closeButton}
+                            onPress={onClose}
+                        >
+                            <Text style={styles.closeButtonText}>✕</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.pickerContainer}>
+                        <Picker
+                            selectedValue={selectedTest}
+                            onValueChange={(itemValue: string) => setSelectedTest(itemValue)}
+                            style={styles.picker}
+                        >
+                            {TEST_TYPES.map((test) => (
+                                <Picker.Item key={test} label={test} value={test} />
+                            ))}
+                        </Picker>
+                    </View>
+
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            style={styles.resultInput}
+                            value={testResult}
+                            onChangeText={setTestResult}
+                            placeholder="Sonuç"
+                            keyboardType="decimal-pad"
+                        />
+                        <Text style={styles.unitText}>g/L</Text>
+                    </View>
+
+                    {loading ? (
+                        <ActivityIndicator size="large" color="#2196F3" />
+                    ) : (
+                        <TouchableOpacity
+                            style={styles.submitButton}
+                            onPress={handleSubmit}
+                        >
+                            <Text style={styles.submitButtonText}>Kaydet</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
 const PatientListScreen = () => {
     const [patients, setPatients] = useState<Patient[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
@@ -71,6 +171,7 @@ const PatientListScreen = () => {
     const [testTrends, setTestTrends] = useState<TestResults>({});
     const [modalVisible, setModalVisible] = useState(false);
     const [ageInMonths, setAgeInMonths] = useState<number | null>(null);
+    const [showAddTestModal, setShowAddTestModal] = useState(false);
 
     useEffect(() => {
         fetchPatients();
@@ -369,9 +470,15 @@ const PatientListScreen = () => {
                             </TouchableOpacity>
                         </View>
 
-                        {ageInMonths !== null && (
+                        <View style={styles.ageContainer}>
                             <Text style={styles.ageText}>Yaş: {ageInMonths} ay</Text>
-                        )}
+                            <TouchableOpacity
+                                style={styles.addButton}
+                                onPress={() => setShowAddTestModal(true)}
+                            >
+                                <Text style={styles.addButtonText}>+</Text>
+                            </TouchableOpacity>
+                        </View>
 
                         <FlatList
                             data={Object.entries(testResults)}
@@ -386,6 +493,14 @@ const PatientListScreen = () => {
                     </View>
                 </View>
             </Modal>
+
+            {selectedPatient && (
+                <AddTestModal
+                    visible={showAddTestModal}
+                    onClose={() => setShowAddTestModal(false)}
+                    patientEmail={selectedPatient.email}
+                />
+            )}
         </View>
     );
 };
@@ -551,6 +666,69 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         marginLeft: 4,
+    },
+    ageContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
+    addButton: {
+        backgroundColor: '#2196F3',
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 10,
+    },
+    addButtonText: {
+        color: 'white',
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 10,
+    },
+    resultInput: {
+        flex: 1,
+        height: 50,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        padding: 10,
+        marginRight: 10,
+    },
+    unitText: {
+        fontSize: 16,
+        color: '#666',
+        marginLeft: 5,
+    },
+    submitButton: {
+        backgroundColor: '#2196F3',
+        padding: 15,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    submitButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    pickerContainer: {
+        marginVertical: 8,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        backgroundColor: '#fff',
+        overflow: 'hidden',
+    },
+    picker: {
+        height: 50,
+        width: '100%',
     },
 });
 
