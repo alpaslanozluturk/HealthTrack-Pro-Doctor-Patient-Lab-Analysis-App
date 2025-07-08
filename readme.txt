@@ -1,1 +1,1 @@
-React Native ve expo ile geliştirilen mobil tahlil takip sistemi. 
+A mobile application built with React Native and Spring Boot that enables doctors to input and track patient lab results. The app compares current values with five different clinical guideline ranges and visualizes trends across time. Patients can view only their own data, including personalized comparisons. Firebase is used for both authentication and database storage, ensuring secure access control.
